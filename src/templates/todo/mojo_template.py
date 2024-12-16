@@ -1,6 +1,12 @@
 from src.templates.interface import BaseTemplate
 
 class MojoTemplate(BaseTemplate):
+    """
+    MojoTemplate is a specialized template for the Mojo programming language.
+
+    This template is designed for developers who are familiar with Python and TypeScript and are learning Mojo.
+    It provides detailed explanations and examples to help users understand Mojo's features and advantages.
+    """
     def __init__(self):
         super().__init__(
             description="Mojo Language Expert: A specialist in the Mojo programming language, adept at explaining its features and usage.",

@@ -1,59 +1,72 @@
-from pydantic import BaseModel, Field
-from typing import List, Dict
-from src.templates.interface import TemplateManager, BaseTemplate
+from typing import Dict, Optional
+from src.templates.interface import BaseTemplate
+from src.templates.saved_templates.coding_template import CodingTemplate
 
+class TemplateManager:
+    """Manages templates for text generation."""
+    
+    def __init__(self):
+        """Initialize template manager with available templates."""
+        self._templates = {
+            "coding": CodingTemplate(),
+            # Add other templates here
+        }
+        self._current_template: Optional[BaseTemplate] = None
+    
+    def get_template(self, template_name: str) -> BaseTemplate:
+        """Get a specific template by name."""
+        if template_name not in self._templates:
+            raise ValueError(f"Template '{template_name}' not found")
+        return self._templates[template_name]
+    
+    def set_current_template(self, template_name: str) -> None:
+        """Set the current active template."""
+        self._current_template = self.get_template(template_name)
+    
+    def get_current_template(self) -> Optional[BaseTemplate]:
+        """Get the currently active template."""
+        return self._current_template
+    
+    def list_templates(self) -> Dict[str, BaseTemplate]:
+        """List all available templates."""
+        return self._templates.copy()
 
-class Handler(BaseModel):
-    templates: TemplateManager = Field(default_factory=TemplateManager)
-    selected_template: str = Field(default_factory=str)
-    available_templates: Dict[str, BaseTemplate] = Field(default_factory=dict)
-    context: List[Dict[str, str]] = Field(default_factory=list)
+# Global template manager instance
+_template_manager = None
 
-class TemplateHandler(TemplateManager):
-    """
-    Initialize the class with a selected template.
+def get_template_manager() -> TemplateManager:
+    """Get or create the global template manager instance."""
+    global _template_manager
+    if _template_manager is None:
+        _template_manager = TemplateManager()
+    return _template_manager
 
-    Parameters:
-        selected_template (Union[str, AvailableTemplates]): The selected template, which can be a string or an AvailableTemplates enum value.
-
-    Returns:
-        None
-    """
-
+class Handler:
     def __init__(self, selected_template: str=None):
-        super().__init__()
-        self.templates = TemplateManager()
+        self.template_manager = get_template_manager()
         if not selected_template:
             self.cli_select_template()
-        self.selected_template = self.get_template(selected_template)
-        self.available_templates = TemplateManager().get_all_fields()
-        self.system_prompt = self.get_system_prompt()
-
+        self.set_current_template(selected_template)
+    
     def get_selected_template(self, selected_template: str) -> str:
-        self.selected_template = self.templates.get_template(selected_template)
-        return self.selected_template
+        self.set_current_template(selected_template)
+        return self.template_manager.get_current_template().name
     
     def get_system_prompt(self) -> Dict[str, str]:
-        """
-        Get the template and return a system prompt based on the selected template.
-
-        Parameters:
-            self: The object instance
-        Returns:
-            Dict[str, str]: The system prompt based on the selected template
-        """
-        return self.templates.get_template(self.selected_template).create_system_prompt()
+        return self.template_manager.get_current_template().create_system_prompt()
     
     def cli_select_template(self):
         print("Available Templates:")
-        for template in self.templates.get_all_fields().keys():
+        for template in self.template_manager.list_templates().keys():
             print(template)
         selected_template = input("Enter the name of the template you want to use: ")
-        self.selected_template = selected_template
+        self.set_current_template(selected_template)
+    
+    def set_current_template(self, template_name: str) -> None:
+        self.template_manager.set_current_template(template_name)
 
-
-def get_template_manager(selected_template: str):
-    return TemplateHandler(selected_template)
+def get_handler(selected_template: str):
+    return Handler(selected_template)
 
 if __name__ == "__main__":
-    print(get_template_manager("coding_template").get_system_prompt())
+    print(get_handler("coding_template").get_system_prompt())
